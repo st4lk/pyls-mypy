@@ -1,8 +1,12 @@
 import re
+import logging
 from mypy import api as mypy_api
 from pyls import hookimpl
 
 line_pattern = r"([^:]+):(?:(\d+):)?(?:(\d+):)? (\w+): (.*)"
+
+
+logger = logging.getLogger(__name__)
 
 
 def parse_line(line, document=None):
@@ -44,11 +48,18 @@ def pyls_lint(document):
     args = ('--incremental',
             '--show-column-numbers',
             '--command', document.source)
-    report, errors, _ = mypy_api.run(args)
+    logger.info('[PYLS_MYPY] mypy args: %s', args)
+    try:
+        report, errors, _ = mypy_api.run(args)
+    except Exception as err:
+        logger.error('[PYLS_MYPY] ERROR!: %s', err)
+        return []
+    logger.info('[PYLS_MYPY] response report: %s', report)
+    logger.info('[PYLS_MYPY] response errors: %s', errors)
 
     diagnostics = []
     for line in report.splitlines():
-        diag = parse_line(line)
+        diag = parse_line(line, document)
         if diag:
             diagnostics.append(diag)
 
